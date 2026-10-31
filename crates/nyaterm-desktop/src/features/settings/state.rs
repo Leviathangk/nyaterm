@@ -641,6 +641,7 @@ impl SettingsFeatureState {
     pub(in crate::features) fn toggle_terminal_action_link_matcher(&mut self, which: &str) -> bool {
         let matcher = &mut self.summary.terminal_action_links_matchers;
         match which {
+            "mac" => matcher.mac = !matcher.mac,
             "ipv4" => matcher.ipv4 = !matcher.ipv4,
             "archive" => matcher.archive = !matcher.archive,
             "host_port" => matcher.host_port = !matcher.host_port,
@@ -1955,6 +1956,9 @@ mod tests {
         state.toggle_terminal_zebra_stripes();
         assert_eq!(state.summary().terminal_zebra_stripes_enabled, !zebra);
         assert!(state.toggle_terminal_action_link_matcher("ipv4"));
+        assert!(state.summary().terminal_action_links_matchers.mac);
+        assert!(state.toggle_terminal_action_link_matcher("mac"));
+        assert!(!state.summary().terminal_action_links_matchers.mac);
         assert!(!state.toggle_terminal_action_link_matcher("unknown"));
     }
 

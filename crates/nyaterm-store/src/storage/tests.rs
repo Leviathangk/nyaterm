@@ -3209,6 +3209,47 @@ fn command_send_preferences_load_legacy_defaults_and_preserve_unknown_settings()
 }
 
 #[test]
+fn mac_matcher_loads_legacy_defaults_and_round_trips_without_losing_unknown_options() {
+    let dir = unique_temp_dir("mac-matcher-settings");
+    let store = ConnectionStore::open(&dir).unwrap();
+    for terminal in [
+        serde_json::json!({}),
+        serde_json::json!({"action_links_matchers": {"ipv4": false, "archive": false, "host_port": false}}),
+    ] {
+        store
+            .save_settings_value(&serde_json::json!({"terminal": terminal}))
+            .unwrap();
+        let summary = store.load_app_settings_summary().unwrap();
+        assert!(summary.terminal_action_links_matchers.mac);
+        assert!(!summary.terminal_action_links_enabled);
+    }
+    store.save_settings_value(&serde_json::json!({"terminal": {
+        "future_terminal_option": "keep",
+        "action_links_enabled": true,
+        "action_links_matchers": {"ipv4": false, "mac": false, "future_matcher": {"enabled": true}}
+    }})).unwrap();
+    let mut summary = store.load_app_settings_summary().unwrap();
+    assert!(!summary.terminal_action_links_matchers.mac);
+    assert!(!summary.terminal_action_links_matchers.ipv4);
+    for mac in [true, false] {
+        summary.terminal_action_links_matchers.mac = mac;
+        let loaded = store.save_terminal_settings(&summary).unwrap();
+        assert_eq!(loaded.terminal_action_links_matchers.mac, mac);
+        assert!(loaded.terminal_action_links_enabled);
+        assert!(!loaded.terminal_action_links_matchers.ipv4);
+        let raw = store.load_settings_value().unwrap();
+        assert_eq!(raw["terminal"]["action_links_matchers"]["mac"], mac);
+        assert_eq!(
+            raw["terminal"]["action_links_matchers"]["future_matcher"],
+            serde_json::json!({"enabled": true})
+        );
+        assert_eq!(raw["terminal"]["future_terminal_option"], "keep");
+    }
+    drop(store);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn save_ui_layout_preserves_explicit_empty_activity_zone() {
     let dir = unique_temp_dir("settings-empty-activity-zone");
     let store = ConnectionStore::open(&dir).expect("store");

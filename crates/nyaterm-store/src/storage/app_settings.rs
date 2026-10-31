@@ -1383,15 +1383,22 @@ impl ConnectionStore {
             &["terminal", "action_links_enabled"],
             serde_json::Value::Bool(settings.terminal_action_links_enabled),
         );
-        set_nested_json_value(
-            &mut value,
-            &["terminal", "action_links_matchers"],
-            serde_json::json!({
-                "ipv4": settings.terminal_action_links_matchers.ipv4,
-                "archive": settings.terminal_action_links_matchers.archive,
-                "host_port": settings.terminal_action_links_matchers.host_port,
-            }),
-        );
+        // Update only known keys so future matcher options survive older readers.
+        for (key, enabled) in [
+            ("mac", settings.terminal_action_links_matchers.mac),
+            ("ipv4", settings.terminal_action_links_matchers.ipv4),
+            ("archive", settings.terminal_action_links_matchers.archive),
+            (
+                "host_port",
+                settings.terminal_action_links_matchers.host_port,
+            ),
+        ] {
+            set_nested_json_value(
+                &mut value,
+                &["terminal", "action_links_matchers", key],
+                serde_json::Value::Bool(enabled),
+            );
+        }
         set_nested_json_value(
             &mut value,
             &["search", "custom_engines"],
@@ -2104,6 +2111,10 @@ fn load_action_links_matchers(
         return defaults;
     };
     nyaterm_core::ActionLinksMatcherSettings {
+        mac: obj
+            .get("mac")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(defaults.mac),
         ipv4: obj
             .get("ipv4")
             .and_then(|v| v.as_bool())

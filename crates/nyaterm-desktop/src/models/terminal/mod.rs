@@ -538,6 +538,7 @@ pub(crate) fn terminal_action_link_matcher_key(
 ) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     enabled.hash(&mut hasher);
+    matchers.mac.hash(&mut hasher);
     matchers.ipv4.hash(&mut hasher);
     matchers.archive.hash(&mut hasher);
     matchers.host_port.hash(&mut hasher);

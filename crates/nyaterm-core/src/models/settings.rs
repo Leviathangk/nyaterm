@@ -288,6 +288,8 @@ impl InternalEditorDisplay {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ActionLinksMatcherSettings {
     #[serde(default = "default_true_action_link")]
+    pub mac: bool,
+    #[serde(default = "default_true_action_link")]
     pub ipv4: bool,
     #[serde(default = "default_true_action_link")]
     pub archive: bool,
@@ -302,6 +304,7 @@ fn default_true_action_link() -> bool {
 impl Default for ActionLinksMatcherSettings {
     fn default() -> Self {
         Self {
+            mac: true,
             ipv4: true,
             archive: true,
             host_port: true,
@@ -454,7 +457,7 @@ pub struct AppSettingsSummary {
     pub terminal_low_latency_mode: bool,
     #[serde(default = "default_terminal_zebra_stripes_enabled")]
     pub terminal_zebra_stripes_enabled: bool,
-    /// Detect clickable entities (IP/host:port/archive) in terminal output (Tauri action_links_enabled).
+    /// Detect clickable entities (IP/MAC/host:port/archive) in terminal output (Tauri action_links_enabled).
     #[serde(default)]
     pub terminal_action_links_enabled: bool,
     #[serde(default)]
@@ -1013,6 +1016,20 @@ fn default_highlight_color_light() -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn mac_matcher_defaults_on_for_legacy_settings_and_preserves_explicit_false() {
+        for value in [serde_json::json!({}), serde_json::json!({"ipv4": false})] {
+            let matchers: super::ActionLinksMatcherSettings =
+                serde_json::from_value(value).unwrap();
+            assert!(matchers.mac);
+        }
+        let matchers: super::ActionLinksMatcherSettings =
+            serde_json::from_value(serde_json::json!({"mac": false})).unwrap();
+        assert!(!matchers.mac);
+        assert_eq!(serde_json::to_value(matchers).unwrap()["mac"], false);
+        assert!(!super::AppSettingsSummary::default().terminal_action_links_enabled);
+    }
+
     #[test]
     fn legacy_and_unknown_encoding_labels_round_trip_unchanged() {
         for label in ["UTF8", " CP936 ", "shift-jis", "euckr", "unknown", ""] {

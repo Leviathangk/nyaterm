@@ -1,5 +1,6 @@
 use futures::channel::mpsc::UnboundedReceiver;
 use gpui::Pixels;
+use nyaterm_core::mac_address::MacAddressFormat;
 use nyaterm_core::{
     CredentialPromptKind, SavedCredential, compile_prompt_regex, get_credential_prompt_pattern,
 };
@@ -7,6 +8,8 @@ use rust_i18n::t;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
+
+use crate::action_links::ActionLinkTarget;
 
 use super::event_wake::{ANY_INTEREST, EventWake};
 
@@ -497,13 +500,16 @@ pub(crate) struct ConnectionGroupEditorState {
 pub(crate) struct ActionLinkMenuAction {
     pub(crate) id: String,
     pub(crate) label: String,
-    pub(crate) command: Option<String>,
-    pub(crate) open_url: Option<String>,
+    pub(crate) target: ActionLinkTarget,
+    pub(crate) mac_format: Option<MacAddressFormat>,
     pub(crate) is_default: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ActionLinkMenuState {
+    /// Distinguishes reopened menus even at the same location in the same session.
+    pub(crate) generation: u64,
+    pub(crate) session_id: String,
     pub(crate) x: Pixels,
     pub(crate) y: Pixels,
     pub(crate) kind_label: String,

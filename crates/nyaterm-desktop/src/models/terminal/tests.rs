@@ -2326,6 +2326,33 @@ fn terminal_frame_action_links_align_with_snapshot_lines() {
 }
 
 #[test]
+fn mac_ranges_map_wide_text_and_invalidate_only_when_the_matcher_changes() {
+    let mut screen = TerminalScreen::new(80, 3);
+    screen.advance_decoded_text("设备 [905d.7c16.b6d9]");
+    let snapshot = screen.viewport_snapshot(0);
+    let mut matchers = ActionLinksMatcherSettings::default();
+    let links = prepare_terminal_frame_action_links(&snapshot, true, &matchers).unwrap();
+    assert_eq!(
+        links.matches_by_line[0][0].kind,
+        crate::action_links::ActionLinkKind::Mac
+    );
+    assert_eq!(links.cell_ranges_by_line[0], [(6, 20)]);
+    let (_, stats) =
+        prepare_terminal_frame_action_links_reusing(&snapshot, true, &matchers, Some(&links));
+    assert_eq!(stats.reused_rows, snapshot.row_count());
+    assert_eq!(stats.rebuilt_rows, 0);
+    matchers.mac = false;
+    let (disabled, stats) =
+        prepare_terminal_frame_action_links_reusing(&snapshot, true, &matchers, Some(&links));
+    let disabled = disabled.unwrap();
+    assert_ne!(links.matcher_key, disabled.matcher_key);
+    assert_eq!(stats.reused_rows, 0);
+    assert_eq!(stats.rebuilt_rows, snapshot.row_count());
+    assert!(disabled.matches_by_line.iter().all(Vec::is_empty));
+    assert!(disabled.cell_ranges_by_line.iter().all(Vec::is_empty));
+}
+
+#[test]
 fn terminal_frame_action_links_reuse_unchanged_rows() {
     let mut screen = TerminalScreen::new(80, 8);
     screen.advance_decoded_text("visit http://example.com");
