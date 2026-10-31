@@ -22,8 +22,6 @@ pub(super) enum ConnectionEditorValidationError {
     TelnetKeepAliveIntervalInvalid,
     UsernameRequired,
     MissingAccount,
-    AccountPasswordMissing,
-    PasswordReplacementRequired,
     ShellPathRequired,
     SerialPortRequired,
     BaudRateInvalid,
@@ -59,7 +57,7 @@ pub(super) fn validate_editor_account(
         && !(editor.kind == ConnectionKindTab::Vnc && editor.vnc_security.mode == "none");
     let id = if identity {
         editor.account_id.as_deref()
-    } else if password_active && editor.password_source == ConnectionEditorPasswordSource::Saved {
+    } else if password_active {
         editor.password_id.as_deref()
     } else {
         None
@@ -82,20 +80,6 @@ pub(super) fn validate_editor_account(
         };
     if editor.kind == ConnectionKindTab::Ssh && effective_username.is_empty() {
         return Err(ConnectionEditorValidationError::UsernameRequired);
-    }
-    if password_active
-        && editor.password_source == ConnectionEditorPasswordSource::Saved
-        && account.is_some_and(|entry| !entry.has_password)
-    {
-        return Err(ConnectionEditorValidationError::AccountPasswordMissing);
-    }
-    if password_active
-        && editor.password_source == ConnectionEditorPasswordSource::Direct
-        && editor.password_edit == crate::models::ConnectionPasswordEdit::Replace
-        && editor.existing_password.is_some()
-        && editor.password.is_empty()
-    {
-        return Err(ConnectionEditorValidationError::PasswordReplacementRequired);
     }
     Ok(())
 }
@@ -128,9 +112,8 @@ pub(super) fn connection_editor_from_saved(
         connection.config,
         ConnectionType::Ssh { .. } | ConnectionType::Telnet { .. }
     );
-    let password_source = if uses_accounts
-        && auth.password_source
-            == Some(nyaterm_core::models::credentials::ConnectionPasswordSource::Connection)
+    let password_source = if uses_accounts && !auth.uses_account_password()
+        || !uses_accounts && (auth.password.is_some() || auth.has_password)
     {
         if auth.password.is_some() || auth.has_password {
             ConnectionEditorPasswordSource::Direct
@@ -143,14 +126,6 @@ pub(super) fn connection_editor_from_saved(
         ConnectionEditorPasswordSource::Direct
     } else {
         ConnectionEditorPasswordSource::Ask
-    };
-    let password = if auth.mode == "password"
-        && password_source == ConnectionEditorPasswordSource::Direct
-        && !auth.has_password
-    {
-        auth.password.clone().unwrap_or_default()
-    } else {
-        nyaterm_core::SecretString::default()
     };
     let icon_auto_detect = connection.icon_auto_detect_enabled();
     let mut editor = ConnectionEditorState {
@@ -170,7 +145,7 @@ pub(super) fn connection_editor_from_saved(
         port: String::new(),
         username: "root".to_string(),
         domain: String::new(),
-        auth_mode: auth.mode,
+        auth_mode: auth.mode.clone(),
         rdp_backend: "builtin".to_string(),
         rdp_security: RdpSecuritySettings::default(),
         rdp_display: RdpDisplaySettings::default(),
@@ -210,7 +185,14 @@ pub(super) fn connection_editor_from_saved(
             auth.account_id.clone()
         },
         password_id: auth.password_id,
-        password,
+        password: if auth.mode == "password"
+            && password_source == ConnectionEditorPasswordSource::Direct
+            && !auth.has_password
+        {
+            auth.password.clone().unwrap_or_default()
+        } else {
+            nyaterm_core::SecretString::default()
+        },
         existing_password: auth.password.filter(|value| !value.is_empty()),
         existing_password_locked: auth.has_password,
         key_id: auth.key_id,
@@ -677,6 +659,7 @@ pub(super) fn build_saved_connection_from_editor(
             if editor.auth_mode == "password"
                 && editor.vnc_security.mode != "none"
                 && editor.password_source == ConnectionEditorPasswordSource::Direct
+                && editor.password_edit == crate::models::ConnectionPasswordEdit::Replace
                 && editor.password.len()
                     > if editor.vnc_security.mode == "vnc_auth" {
                         8
@@ -796,13 +779,16 @@ pub(super) fn build_saved_connection_from_editor(
             let (password, has_password) = if mode == "password"
                 && editor.password_source == ConnectionEditorPasswordSource::Direct
             {
-                if editor.password_edit == crate::models::ConnectionPasswordEdit::Remove {
-                    (None, false)
-                } else if entered_password.is_empty() {
-                    let has_password = existing.is_some() && editor.existing_password_locked;
-                    (existing, has_password)
-                } else {
-                    (Some(entered_password), false)
+                match editor.password_edit {
+                    crate::models::ConnectionPasswordEdit::Remove => (None, false),
+                    crate::models::ConnectionPasswordEdit::Keep => {
+                        let has_password = existing.is_some() && editor.existing_password_locked;
+                        (existing, has_password)
+                    }
+                    crate::models::ConnectionPasswordEdit::Replace => (
+                        Some(entered_password).filter(|value| !value.is_empty()),
+                        false,
+                    ),
                 }
             } else {
                 (None, false)
@@ -827,8 +813,7 @@ pub(super) fn build_saved_connection_from_editor(
                         nyaterm_core::models::credentials::ConnectionPasswordSource::Connection
                     },
                 ),
-                password_id: (mode == "password"
-                    && editor.password_source == ConnectionEditorPasswordSource::Saved)
+                password_id: (mode == "password")
                     .then(|| editor.password_id.clone())
                     .flatten(),
                 username_source: (matches!(
@@ -1039,7 +1024,7 @@ mod tests {
 
     use super::{
         ConnectionEditorValidationError, build_saved_connection_from_editor,
-        connection_editor_from_saved,
+        connection_editor_from_saved, validate_editor_account,
     };
 
     #[test]
@@ -1152,6 +1137,7 @@ mod tests {
                 let mut editor = connection_editor_from_saved(connection.clone(), false);
                 editor.password_source = ConnectionEditorPasswordSource::Direct;
                 editor.password = password.into();
+                editor.password_edit = crate::models::ConnectionPasswordEdit::Replace;
                 let saved = build_saved_connection_from_editor(&editor).expect("valid password");
                 let auth = saved.auth.as_ref().expect("auth");
                 assert_eq!(auth.password.as_deref(), Some(password), "{kind}");
@@ -1171,7 +1157,7 @@ mod tests {
     }
 
     #[test]
-    fn connection_editor_only_prefills_password_for_direct_password_authentication() {
+    fn connection_editor_does_not_prefill_account_or_inactive_passwords() {
         for auth in [
             serde_json::json!({"mode": "password", "password_source": "account", "account_id": "account", "password": "fixture-secret"}),
             serde_json::json!({"mode": "key", "password": "fixture-secret"}),
@@ -1205,10 +1191,65 @@ mod tests {
 
         let mut editor = connection_editor_from_saved(connection, false);
         editor.password = "new-secret".to_string().into();
+        editor.password_edit = crate::models::ConnectionPasswordEdit::Replace;
         let replaced = build_saved_connection_from_editor(&editor).expect("replacement password");
         let auth = replaced.auth.expect("auth");
         assert_eq!(auth.password.as_deref(), Some("new-secret"));
         assert!(!auth.has_password);
+    }
+
+    #[test]
+    fn connection_password_edits_preserve_or_replace_or_remove_supported_saved_formats() {
+        use crate::models::ConnectionPasswordEdit;
+
+        for kind in ["ssh", "telnet", "rdp", "vnc"] {
+            for locked in [false, true] {
+                let connection: SavedConnection = serde_json::from_value(serde_json::json!({
+                    "id": "password-edits", "name": "Password edits", "type": kind,
+                    "host": "example.test", "username": "user",
+                    "auth": {"mode": "password", "password": "old", "has_password": locked}
+                }))
+                .unwrap();
+                let mut editor = connection_editor_from_saved(connection, false);
+                assert_eq!(editor.password.is_empty(), locked);
+                assert_eq!(editor.password_edit, ConnectionPasswordEdit::Keep);
+
+                editor.name = "Renamed".into();
+                validate_editor_account(&editor, &[]).unwrap();
+                let auth = build_saved_connection_from_editor(&editor)
+                    .unwrap()
+                    .auth
+                    .unwrap();
+                assert_eq!(auth.password.as_deref(), Some("old"));
+                assert_eq!(auth.has_password, locked);
+
+                editor.password_edit = ConnectionPasswordEdit::Replace;
+                editor.password = " new ".into();
+                let auth = build_saved_connection_from_editor(&editor)
+                    .unwrap()
+                    .auth
+                    .unwrap();
+                assert_eq!(auth.password.as_deref(), Some(" new "));
+                assert!(!auth.has_password);
+
+                editor.password = Default::default();
+                editor.password_edit = ConnectionPasswordEdit::Remove;
+                let auth = build_saved_connection_from_editor(&editor)
+                    .unwrap()
+                    .auth
+                    .unwrap();
+                assert!(auth.password.is_none());
+                assert!(!auth.has_password);
+
+                editor.password_edit = ConnectionPasswordEdit::Keep;
+                let auth = build_saved_connection_from_editor(&editor)
+                    .unwrap()
+                    .auth
+                    .unwrap();
+                assert_eq!(auth.password.as_deref(), Some("old"));
+                assert_eq!(auth.has_password, locked);
+            }
+        }
     }
 
     #[test]
@@ -1728,6 +1769,7 @@ mod tests {
 
         let mut password_boundary = editor.clone();
         password_boundary.password_source = ConnectionEditorPasswordSource::Direct;
+        password_boundary.password_edit = crate::models::ConnectionPasswordEdit::Replace;
         password_boundary.vnc_security.mode = "vnc_auth".to_string();
         password_boundary.password = "12345678".to_string().into();
         assert!(build_saved_connection_from_editor(&password_boundary).is_ok());
@@ -1743,6 +1785,10 @@ mod tests {
             build_saved_connection_from_editor(&password_boundary).unwrap_err(),
             ConnectionEditorValidationError::VncPasswordTooLong
         );
+        // Existing secrets may predate these limits; an unrelated edit keeps them.
+        password_boundary.password_edit = crate::models::ConnectionPasswordEdit::Keep;
+        password_boundary.existing_password = Some(password_boundary.password.clone());
+        assert!(build_saved_connection_from_editor(&password_boundary).is_ok());
 
         let saved = build_saved_connection_from_editor(&editor).expect("valid connection");
         let ConnectionType::Vnc {
@@ -2009,10 +2055,7 @@ mod account_edit_tests {
         );
         editor.username = "manual".into();
         account.has_password = false;
-        assert_eq!(
-            super::validate_editor_account(&editor, &[account.clone()]),
-            Err(ConnectionEditorValidationError::AccountPasswordMissing)
-        );
+        assert!(super::validate_editor_account(&editor, &[account.clone()]).is_ok());
         editor.password_source = ConnectionEditorPasswordSource::Ask;
         assert!(super::validate_editor_account(&editor, &[account.clone()]).is_ok());
         account.username = "deploy".into();
@@ -2114,5 +2157,58 @@ mod account_edit_tests {
         assert!(
             matches!(saved.config, nyaterm_core::ConnectionType::Rdp { backend, .. } if backend == "future-engine")
         );
+    }
+
+    #[test]
+    fn legacy_local_password_override_keeps_its_source_until_account_is_reselected() {
+        for kind in ["ssh", "telnet", "rdp", "vnc"] {
+            for locked in [false, true] {
+                let original: nyaterm_core::SavedConnection = serde_json::from_value(serde_json::json!({
+                        "id":"legacy", "name":"Legacy", "type":kind, "host":"example.test", "username":"user",
+                        "auth":{"mode":"password", "account_id": if kind == "ssh" || kind == "telnet" { Some("account") } else { None }, "password_id":"account", "password":"local", "has_password":locked}
+                    })).unwrap();
+                let editor = super::connection_editor_from_saved(original, false);
+                assert_eq!(
+                    editor.password_source,
+                    crate::models::ConnectionEditorPasswordSource::Direct
+                );
+                assert_eq!(editor.password.is_empty(), locked);
+                let auth = super::build_saved_connection_from_editor(&editor)
+                    .unwrap()
+                    .auth
+                    .unwrap();
+                assert_eq!(auth.password.as_deref(), Some("local"));
+                assert_eq!(auth.has_password, locked);
+                assert_eq!(auth.saved_account_id(), Some("account"));
+                assert!(!auth.uses_account_password());
+            }
+        }
+    }
+
+    #[test]
+    fn password_only_account_references_survive_empty_passwords_and_report_missing_accounts() {
+        for kind in ["ssh", "telnet", "rdp", "vnc"] {
+            let original: nyaterm_core::SavedConnection = serde_json::from_value(serde_json::json!({
+                "id":"account", "name":"Account", "type":kind, "host":"example.test", "username":"user",
+                "auth":{"mode":"password", "password_id":"account"}
+            }))
+            .unwrap();
+            let editor = super::connection_editor_from_saved(original, false);
+            let account: nyaterm_core::SavedPassword = serde_json::from_value(serde_json::json!({
+                "id":"account", "name":"Account", "username":"user", "has_password":false
+            }))
+            .unwrap();
+            assert!(super::validate_editor_account(&editor, &[account]).is_ok());
+            assert_eq!(
+                super::validate_editor_account(&editor, &[]),
+                Err(super::ConnectionEditorValidationError::MissingAccount)
+            );
+            let auth = super::build_saved_connection_from_editor(&editor)
+                .unwrap()
+                .auth
+                .unwrap();
+            assert_eq!(auth.saved_account_id(), Some("account"));
+            assert!(auth.password.is_none());
+        }
     }
 }

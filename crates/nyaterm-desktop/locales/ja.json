@@ -3909,6 +3909,11 @@
     "conflict": "保存済みテーマが別の場所で変更されました。編集内容は保持されています。編集をエクスポートするか、破棄して再読み込みしてください。"
   },
   "authForm": {
+    "connectionPasswordEnter": "パスワードを入力。空欄の場合は接続時に確認します",
+    "connectionPasswordStored": "保存済みのパスワード",
+    "connectionPasswordAccount": "選択したアカウントから取得",
+    "connectionPasswordLegacy": "この接続の既存パスワードを使用します。編集するにはアカウントの関連付けを解除してください。",
+    "connectionPasswordUnavailable": "パスワードを読み込めませんでした。保存済みのパスワードは保持されています。",
     "newPasswordRequiredLabel": "新しいパスワード（必須）",
     "accountPasswordUnreadable": "アカウントのパスワードを復号できません。アカウント設定で変更してください。",
     "accountName": "アカウント名（必須）",

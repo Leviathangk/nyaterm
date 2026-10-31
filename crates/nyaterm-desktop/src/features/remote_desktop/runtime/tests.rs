@@ -680,6 +680,23 @@ fn reconnect_password_selection_resolves_locked_values_by_id() {
 }
 
 #[test]
+fn independent_remote_desktop_password_keeps_spaces_and_takes_precedence_over_account() {
+    for password in [" secret ", "   "] {
+        let auth = ConnectionAuth {
+            mode: "password".into(),
+            password: Some(password.into()),
+            password_id: Some("account".into()),
+            ..ConnectionAuth::default()
+        };
+        assert_eq!(
+            inline_remote_desktop_password(Some(&auth)).as_deref(),
+            Some(password)
+        );
+        assert_eq!(remote_desktop_password_id(Some(&auth)), None);
+    }
+}
+
+#[test]
 fn no_authentication_mode_skips_the_password_prompt() {
     let none = ConnectionAuth {
         mode: "none".to_string(),

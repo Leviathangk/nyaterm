@@ -3910,6 +3910,11 @@
     "conflict": "저장된 테마가 다른 곳에서 변경되었습니다. 편집 내용은 유지됩니다. 내보내거나 편집을 버리고 다시 불러오세요."
   },
   "authForm": {
+    "connectionPasswordEnter": "비밀번호 입력. 비워 두면 연결할 때 묻습니다",
+    "connectionPasswordStored": "저장된 비밀번호",
+    "connectionPasswordAccount": "선택한 계정에서 제공",
+    "connectionPasswordLegacy": "이 연결의 기존 비밀번호를 사용합니다. 편집하려면 계정 연결을 해제하세요.",
+    "connectionPasswordUnavailable": "비밀번호를 불러올 수 없습니다. 저장된 비밀번호는 유지됩니다.",
     "newPasswordRequiredLabel": "새 비밀번호 (필수)",
     "accountPasswordUnreadable": "계정 비밀번호를 복호화할 수 없습니다. 계정 설정에서 변경하세요.",
     "accountName": "계정 이름 (필수)",

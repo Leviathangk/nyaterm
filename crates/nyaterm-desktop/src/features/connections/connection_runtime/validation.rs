@@ -114,11 +114,7 @@ impl ConnectionEditorValidationError {
             ConnectionEditorValidationError::PortInvalid => ConnectionEditorField::Port,
             ConnectionEditorValidationError::UsernameRequired
             | ConnectionEditorValidationError::MissingAccount => ConnectionEditorField::Username,
-            ConnectionEditorValidationError::AccountPasswordMissing
-            | ConnectionEditorValidationError::PasswordReplacementRequired
-            | ConnectionEditorValidationError::VncPasswordTooLong => {
-                ConnectionEditorField::Password
-            }
+            ConnectionEditorValidationError::VncPasswordTooLong => ConnectionEditorField::Password,
             ConnectionEditorValidationError::ShellPathRequired => ConnectionEditorField::ShellPath,
             ConnectionEditorValidationError::SerialPortRequired => {
                 ConnectionEditorField::SerialPort
@@ -172,18 +168,16 @@ impl ConnectionEditorValidationError {
             {
                 ConnectionEditorFocusTarget::Select(ConnectionEditorSelect::Account)
             }
-            _ if matches!(self, Self::MissingAccount | Self::AccountPasswordMissing) => {
-                ConnectionEditorFocusTarget::Select(
-                    if matches!(
-                        editor.kind,
-                        ConnectionKindTab::Ssh | ConnectionKindTab::Telnet
-                    ) {
-                        ConnectionEditorSelect::Account
-                    } else {
-                        ConnectionEditorSelect::SavedPassword
-                    },
-                )
-            }
+            _ if matches!(self, Self::MissingAccount) => ConnectionEditorFocusTarget::Select(
+                if matches!(
+                    editor.kind,
+                    ConnectionKindTab::Ssh | ConnectionKindTab::Telnet
+                ) {
+                    ConnectionEditorSelect::Account
+                } else {
+                    ConnectionEditorSelect::SavedPassword
+                },
+            ),
             _ => ConnectionEditorFocusTarget::Field(field),
         };
         location(field.section(), target)
@@ -222,11 +216,6 @@ mod tests {
                 ConnectionEditorValidationError::UsernameRequired,
                 ConnectionEditorSection::Basic,
                 ConnectionEditorField::Username,
-            ),
-            (
-                ConnectionEditorValidationError::PasswordReplacementRequired,
-                ConnectionEditorSection::Basic,
-                ConnectionEditorField::Password,
             ),
             (
                 ConnectionEditorValidationError::VncUsernameTooLong,

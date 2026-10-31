@@ -62,7 +62,6 @@ pub(crate) enum ConnectionEditorSection {
     Display,
     Session,
     Serial,
-    Startup,
 }
 
 impl ConnectionEditorSection {
@@ -91,7 +90,7 @@ impl ConnectionEditorSection {
                 Self::Session,
             ],
             ConnectionKindTab::Serial => &[Self::Basic, Self::Serial, Self::Terminal],
-            ConnectionKindTab::Local => &[Self::Basic, Self::Startup, Self::Terminal],
+            ConnectionKindTab::Local => &[Self::Basic, Self::Terminal],
         }
     }
 
@@ -110,7 +109,6 @@ impl ConnectionEditorSection {
             Self::Display => "display",
             Self::Session => "session",
             Self::Serial => "serial",
-            Self::Startup => "startup",
         }
     }
 
@@ -129,7 +127,6 @@ impl ConnectionEditorSection {
             Self::Display => t!("dialog.editorSections.display"),
             Self::Session => t!("dialog.editorSections.session"),
             Self::Serial => t!("dialog.editorSections.serial"),
-            Self::Startup => t!("dialog.editorSections.startup"),
         }
     }
 }
@@ -264,13 +261,13 @@ impl ConnectionEditorField {
             | Self::Username
             | Self::Domain
             | Self::Password
+            | Self::ShellPath
+            | Self::ShellArgs
+            | Self::WorkingDir
             | Self::AgentEnvironmentVariable
             | Self::AgentUnixSocket => ConnectionEditorSection::Basic,
             Self::AgentForwardingEnvironmentVariable | Self::AgentForwardingSocketPath => {
                 ConnectionEditorSection::Forwarding
-            }
-            Self::ShellPath | Self::ShellArgs | Self::WorkingDir => {
-                ConnectionEditorSection::Startup
             }
             Self::SerialPort | Self::BaudRate => ConnectionEditorSection::Serial,
             Self::PostLoginCommand | Self::PostLoginDelay => ConnectionEditorSection::PostLogin,
@@ -449,6 +446,17 @@ impl std::fmt::Debug for ConnectionEditorState {
             .field("focused_field", &self.focused_field)
             .field("error", &self.error)
             .finish_non_exhaustive()
+    }
+}
+
+impl ConnectionEditorState {
+    pub(crate) fn password_account_id(&self) -> Option<&str> {
+        match self.kind {
+            ConnectionKindTab::Ssh | ConnectionKindTab::Telnet => self.account_id.as_deref(),
+            ConnectionKindTab::Rdp | ConnectionKindTab::Vnc => self.password_id.as_deref(),
+            _ => None,
+        }
+        .filter(|id| !id.is_empty())
     }
 }
 

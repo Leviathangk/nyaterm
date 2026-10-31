@@ -3909,6 +3909,11 @@
     "conflict": "Les thèmes enregistrés ont changé ailleurs. Vos modifications sont conservées. Exportez-les ou abandonnez-les et rechargez avant de réessayer."
   },
   "authForm": {
+    "connectionPasswordEnter": "Saisir un mot de passe ; laisser vide pour le demander à la connexion",
+    "connectionPasswordStored": "Mot de passe enregistré",
+    "connectionPasswordAccount": "Fourni par le compte sélectionné",
+    "connectionPasswordLegacy": "Utilise le mot de passe existant de cette connexion. Dissocier le compte pour le modifier.",
+    "connectionPasswordUnavailable": "Impossible de charger le mot de passe. Le mot de passe enregistré a été conservé.",
     "newPasswordRequiredLabel": "Nouveau mot de passe (obligatoire)",
     "accountPasswordUnreadable": "Impossible de déchiffrer le mot de passe du compte. Modifiez-le dans les paramètres du compte.",
     "accountName": "Nom du compte (obligatoire)",

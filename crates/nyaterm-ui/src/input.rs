@@ -478,6 +478,13 @@ impl NyaInputState {
         }
     }
 
+    /// Let adapters defer special key handling while an IME owns marked text.
+    pub fn is_composing(&self, window: &mut Window, cx: &mut App) -> bool {
+        self.state
+            .as_ref()
+            .is_some_and(|state| state.is_composing(window, cx))
+    }
+
     pub fn set_content(&mut self, text: &str, cx: &mut Context<Self>) {
         self.pending_value = Some(SharedString::from(text.to_string()));
         cx.notify();
@@ -1884,6 +1891,37 @@ mod tests {
         cx.simulate_keystrokes("enter");
         cx.run_until_parked();
         assert_eq!(submitted.get(), 1);
+    }
+
+    #[gpui::test]
+    fn composition_query_tracks_password_ime_without_confirming_marked_text(
+        cx: &mut TestAppContext,
+    ) {
+        use gpui::EntityInputHandler as _;
+        cx.update(gpui_kit::init);
+        let (fixture, cx) = cx.add_window_view(|_, cx| SecretInputFixture::new(0, cx));
+        let field = fixture.read_with(cx, |fixture, _| fixture.field.clone());
+        cx.update(|window, cx| {
+            field.update(cx, |state, cx| state.set_content_silent("", cx));
+            _ = window.draw(cx);
+            window.focus(&field.read(cx).component_focus_handle(cx), cx);
+            assert!(!field.update(cx, |state, cx| state.is_composing(window, cx)));
+            let component = field.read(cx).component_state().unwrap();
+            component.update(cx, |state, cx| {
+                state.replace_and_mark_text_in_range(None, "拼", Some(0..1), window, cx);
+            });
+            assert!(field.update(cx, |state, cx| state.is_composing(window, cx)));
+            assert!(
+                field.update(cx, |state, cx| state.is_composing(window, cx)),
+                "queries must not confirm IME text"
+            );
+            component.update(cx, |state, cx| {
+                state.replace_and_mark_text_in_range(None, "", Some(0..0), window, cx);
+            });
+            assert!(!field.update(cx, |state, cx| state.is_composing(window, cx)));
+            component.update(cx, |state, cx| state.unmark_text(window, cx));
+            assert!(!field.update(cx, |state, cx| state.is_composing(window, cx)));
+        });
     }
 
     #[test]

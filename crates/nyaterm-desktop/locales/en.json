@@ -3903,6 +3903,11 @@
     "conflict": "Saved themes changed elsewhere. Your edits are preserved. Export them or discard them and reload before retrying."
   },
   "authForm": {
+    "connectionPasswordEnter": "Enter a password; leave blank to ask when connecting",
+    "connectionPasswordStored": "Saved password",
+    "connectionPasswordAccount": "Provided by the selected account",
+    "connectionPasswordLegacy": "Using this connection’s existing password. Unlink the account to edit it.",
+    "connectionPasswordUnavailable": "The password could not be loaded. The saved password has been kept.",
     "newPasswordRequiredLabel": "New password (required)",
     "accountPasswordUnreadable": "The account password could not be decrypted. Modify it in account settings.",
     "accountName": "Account name (required)",

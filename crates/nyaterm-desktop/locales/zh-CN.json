@@ -3903,6 +3903,11 @@
     "conflict": "已保存主题在其他位置发生变化，编辑内容已保留。请先导出编辑，或放弃编辑并重新载入后重试。"
   },
   "authForm": {
+    "connectionPasswordEnter": "输入密码，留空则连接时询问",
+    "connectionPasswordStored": "已保存密码",
+    "connectionPasswordAccount": "由所选账户提供",
+    "connectionPasswordLegacy": "使用此连接已有密码；解除账户关联后可编辑。",
+    "connectionPasswordUnavailable": "无法读取密码，已保留原密码。",
     "newPasswordRequiredLabel": "新密码（必填）",
     "accountPasswordUnreadable": "无法解密账户密码，请在账户中修改密码。",
     "accountName": "账户名称（必填）",

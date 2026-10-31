@@ -746,7 +746,7 @@ pub(super) fn inline_remote_desktop_password(
     if let Some(password) = auth
         .password
         .as_deref()
-        .filter(|password| !password.trim().is_empty())
+        .filter(|password| !password.is_empty())
     {
         return (!auth.has_password).then(|| password.to_owned().into());
     }
@@ -761,7 +761,7 @@ pub(super) fn remote_desktop_password_id(
         || auth
             .password
             .as_deref()
-            .is_some_and(|password| !password.trim().is_empty() && !auth.has_password)
+            .is_some_and(|password| !password.is_empty() && !auth.has_password)
     {
         return None;
     }

@@ -3910,6 +3910,11 @@
     "conflict": "已儲存主題已在其他位置變更，編輯內容已保留。請先匯出編輯，或放棄編輯並重新載入後重試。"
   },
   "authForm": {
+    "connectionPasswordEnter": "輸入密碼，留空則連線時詢問",
+    "connectionPasswordStored": "已儲存密碼",
+    "connectionPasswordAccount": "由所選帳戶提供",
+    "connectionPasswordLegacy": "使用此連線原有密碼；解除帳戶關聯後可編輯。",
+    "connectionPasswordUnavailable": "無法讀取密碼，已保留原密碼。",
     "newPasswordRequiredLabel": "新密碼（必填）",
     "accountPasswordUnreadable": "無法解密帳戶密碼，請在帳戶中修改密碼。",
     "accountName": "帳戶名稱（必填）",
