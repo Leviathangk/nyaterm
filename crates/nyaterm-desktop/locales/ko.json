@@ -2458,6 +2458,7 @@
     "collapseAllFolders": "모든 폴더 접기",
     "connect": "연결",
     "connectSelected": "선택 항목 열기",
+    "connectSelectedConfirm": "선택한 연결 %{count}개를 모두 열까요?",
     "connecting": "%{name}에 연결 중...",
     "connectionFailed": "연결 실패: %{error}",
     "connectionName": "이름",

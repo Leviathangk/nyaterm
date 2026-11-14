@@ -2458,6 +2458,7 @@
     "collapseAllFolders": "すべてのフォルダーを折りたたむ",
     "connect": "接続",
     "connectSelected": "選択項目を開く",
+    "connectSelectedConfirm": "選択した %{count} 件の接続をすべて開きますか？",
     "connecting": "%{name} に接続中...",
     "connectionFailed": "接続に失敗しました: %{error}",
     "connectionName": "名前",

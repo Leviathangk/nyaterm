@@ -2458,6 +2458,7 @@
     "collapseAllFolders": "收起所有文件夹",
     "connect": "连接",
     "connectSelected": "打开所选连接",
+    "connectSelectedConfirm": "确定要打开全部 %{count} 个所选连接吗？",
     "connecting": "正在连接 %{name}…",
     "connectionFailed": "连接失败：%{error}",
     "connectionName": "连接名称",

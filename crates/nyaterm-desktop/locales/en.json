@@ -2458,6 +2458,7 @@
     "collapseAllFolders": "Collapse All Folders",
     "connect": "Connect",
     "connectSelected": "Open Selected",
+    "connectSelectedConfirm": "Open all %{count} selected connections?",
     "connecting": "Connecting to %{name}...",
     "connectionFailed": "Connection failed: %{error}",
     "connectionName": "Name",

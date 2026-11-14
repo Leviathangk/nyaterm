@@ -2458,6 +2458,7 @@
     "collapseAllFolders": "收起所有資料夾",
     "connect": "連線",
     "connectSelected": "開啟所選連線",
+    "connectSelectedConfirm": "確定要開啟全部 %{count} 個所選連線嗎？",
     "connecting": "正在連線 %{name}…",
     "connectionFailed": "連線失敗：%{error}",
     "connectionName": "連線名稱",
